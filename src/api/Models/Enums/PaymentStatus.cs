@@ -3,19 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace PagCerto.Enums
+namespace api.Models.Enums
 {
-    public enum TransactionStatus
+    public enum PaymentStatus
     {
         Waiting,
         InAnalisys,
         Done
     }
-
-    public enum TransactionResult
-    {
-        Approved,
-        Rejected
-    }
-
 }

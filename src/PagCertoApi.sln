@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.852
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "api", "api\api.csproj", "{1D7AB1B2-00C6-4E2F-8A74-E98AD2B039EC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tests", "tests\tests.csproj", "{FADBEEE6-73E2-4E76-ABAE-DC712FC4E21C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D7AB1B2-00C6-4E2F-8A74-E98AD2B039EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D7AB1B2-00C6-4E2F-8A74-E98AD2B039EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D7AB1B2-00C6-4E2F-8A74-E98AD2B039EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D7AB1B2-00C6-4E2F-8A74-E98AD2B039EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FADBEEE6-73E2-4E76-ABAE-DC712FC4E21C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FADBEEE6-73E2-4E76-ABAE-DC712FC4E21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FADBEEE6-73E2-4E76-ABAE-DC712FC4E21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FADBEEE6-73E2-4E76-ABAE-DC712FC4E21C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CDCEFD1-B6CE-45D6-87BC-1C328F6F9867}
+	EndGlobalSection
+EndGlobal

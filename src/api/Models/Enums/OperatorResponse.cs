@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace PagCerto.Enums
+namespace api.Models.Enums
 {
     public enum OperatorResponse
     {
