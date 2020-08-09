@@ -1,4 +1,5 @@
-﻿using api.Model;
+﻿using api.Extensions;
+using api.Model;
 using api.Models.EntityModel;
 using api.Models.IntegrationModel;
 using Microsoft.Extensions.Logging;
@@ -9,15 +10,15 @@ using System.Threading.Tasks;
 
 namespace api.Models.ServiceModel
 {
-    public class PaymentProcessing
+    public class AdvanceProcessing
     {
-        public static readonly decimal _fixedTax = 0.9m;
         private apiContext _dbContext;
         private readonly IAccountApi _account;
         private readonly ILogger _log;
         private CardPaymentProcessing _cardProcessing;
+        private const decimal _advanceTax = .038m;
 
-        public PaymentProcessing(apiContext dbContext, IAcquirerApi acquirer, IAccountApi account, ILogger log)
+        public AdvanceProcessing(apiContext dbContext, IAcquirerApi acquirer, IAccountApi account, ILogger log)
         {
             _dbContext = dbContext;
             _account = account;
@@ -28,46 +29,52 @@ namespace api.Models.ServiceModel
         public bool Approved { get; private set; }
         public bool CardNotSupported { get; private set; }
 
-        public async Task<bool> Process(Payment payment, string token)
+        public async Task<Advance> Request(Advance advance, string token)
         {
             try
             {
                 var customer = await _account.WhoAmI(token);
-                var result = await _cardProcessing.Process(payment).ConfigureAwait(false);
 
-                payment.CreatedAt = DateTime.UtcNow;
-                payment.CardLastDigits = GetLastFourCardDigits(payment.CardDigits);
+                advance.CustomerId = customer.CustomerId;
+                advance.RequestDate = DateTime.UtcNow;
+                
+                var pList = advance.Payments.Select(p => p.Id).ToList();
+                var pays = _dbContext.Payments.IncludeInstalments().Where(q => q.CustomerId == advance.CustomerId && pList.Contains(q.Id));
+                advance.Payments = pays.ToList();
 
-                payment.Instalments = new List<Instalment>();
-                var instalmentValues = ApplyInstalmentValues(payment.Amount, payment.InstalmentsCount);
-
-                for (short i = 1; i < payment.InstalmentsCount + 1; i++)
+                foreach (var pay in pays)
                 {
-                    payment.Instalments.Add(new Instalment()
-                    {
-                        Ammount = instalmentValues[i - 1],
-                        CreatedAt = payment.CreatedAt,
-                        CustomerId = customer.CustomerId,
-                        Number = i,
-                        TotalOf = payment.InstalmentsCount,
-                        AllInstallments = payment.Amount,
-                        FixedTax = i == 1 ? _fixedTax : 0m,
-                        AdvanceTax = 0m,
-                        TargetDate = DateTime.Now.AddDays(30 * i).Date
-                    });
+                    advance.GrossAmount += pay.Instalments.Where(i => !i.PaidAt.HasValue).Sum(i => i.Ammount);
+                    advance.FixedTaxes += pay.Instalments.Where(i => !i.PaidAt.HasValue).Sum(i => i.FixedTax);
+                    
+                    foreach (var instalment in pay.Instalments.Where(i => !i.PaidAt.HasValue)) {
+                        decimal _advanceTax = GetAdvanceTaxRate(DateTime.Now, instalment.TargetDate);
+                        advance.AdvanceTaxes += instalment.Ammount * _advanceTax;
+                    }
                 }
 
-                payment.Result = result ? Enums.PaymentResponse.Approved : Enums.PaymentResponse.Rejected;
+                advance.NetAmount = advance.GrossAmount - advance.FixedTaxes - advance.AdvanceTaxes;
 
-                _dbContext.Payments.Add(payment);
+                _dbContext.Advances.Add(advance);
 
-                return true;
+                return advance;
             }
             catch(Exception ex)
             {
                 _log.LogError(ex, "There was an error while processing the Payment Request" );
-                return false;
+                return null;
             }
+        }
+
+        private decimal GetAdvanceTaxRate(DateTime referenceDate, DateTime targetDate)
+        {
+            if (referenceDate > targetDate)
+                return -1;
+
+            short i = 1;
+            while (referenceDate.AddDays(i * 30) <= targetDate) i++;
+
+            return i * _advanceTax;
         }
 
         private decimal[] ApplyInstalmentValues(decimal amount, short instalmentsCount)

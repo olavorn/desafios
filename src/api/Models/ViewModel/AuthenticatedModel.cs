@@ -2,7 +2,7 @@
 
 namespace api.Models.ViewModel
 {
-    public class AuthenticatedModel
+    public class AuthenticatedModel : PagedModel
     {
         [Display(Name = "token")]
         public string AuthToken { get; set; }

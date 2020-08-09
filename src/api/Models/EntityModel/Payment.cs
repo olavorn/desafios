@@ -108,7 +108,7 @@ namespace api.Model
         /// <summary>
         /// Chave Referência de Antecipação
         /// </summary>
-        public long AdvanceId { get; set; }
+        public long? AdvanceId { get; set; }
 
         /// <summary>
         /// Parcelas

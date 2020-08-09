@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -19,83 +20,30 @@ namespace tests
 {
     public class PaymentTest
     {
-        /// <summary>
-        /// Realizar pagamento com cartão de crédito (transação);
-        /// </summary>
-        [Fact]
-        public async Task CreditCardPaymentTest()
+        #region Setup
+
+        public IConfiguration Configuration { get; set; }
+        public ILogger FakeLogger { get; set; }
+        public apiContext DbContext { get; set; }
+        public IAcquirerApi FakeAcquirer { get; set; }
+        public IAccountApi FakeAccount { get; set; }
+
+        public PaymentTest()
+        {
+            
+        }
+
+        public void SetupTest()
         {
             var options = new DbContextOptionsBuilder<apiContext>()
-            .UseInMemoryDatabase(databaseName: "ApiDatabase")
-            .Options;
-            
+                .UseInMemoryDatabase(databaseName: "ApiDatabase")
+                .Options;
 
-            var configuration = BuildConfiguration();
-            var fakeLogger = BuildLogger();
-            var fakeAcquirer = BuildAcquirerApiService();
-            
-
-            var dbContext = new apiContext(configuration, options);
-            var fakeAccount = BuildFakeAccountService(dbContext);
-
-            var customer = new CustomerModel()
-            {
-                Name = "Olavo Neto",
-                Email = "olavo@exodus.eti.br",
-            };
-
-            dbContext.Customers.Add(customer.Map());
-            dbContext.SaveChanges();
-            var registeredCustomer = await dbContext.Customers.FirstOrDefaultAsync();
-            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
-            customer.Id = registeredCustomer.Id;
-
-            var paymentModel = new PaymentModel()
-            {
-                Customer = customer,
-                Amount = 100,
-                InstalmentsCount = 5,
-                CardNumber = "5555111122223333",
-                CardExpirationDate = "08/2021",
-                CardName = "OLAVO DE SOUZA ROCHA NETO",
-                CardSecurityNumber = "558",
-                AuthToken = waiToken
-            };
-            var before = DateTime.Now;
-
-            PaymentController controller = new PaymentController(dbContext, fakeAcquirer, fakeAccount, fakeLogger);
-            var cResponse = await controller.ProcessPayment(paymentModel);
-
-            Assert.IsNotType<PaymentErrorJson>(cResponse);
-
-            Assert.NotNull(cResponse);
-            Assert.Equal(100M, cResponse.Amount);
-            Assert.Equal(5, cResponse.InstalmentsCount);
-            Assert.Null(cResponse.CanceledAt);
-            Assert.Equal(OperatorResponse.Acepted, cResponse.OperatorResponse);
-            Assert.Null(cResponse.TransferDate);
-
-            //pelo contexto
-
-            //Customers
-            Assert.Equal(1, await dbContext.Customers.CountAsync());
-
-            //payment
-            Assert.Equal(1, await dbContext.Payments.CountAsync());
-            Assert.Equal(5, (await dbContext.Payments.Include( p=>p.Instalments).FirstAsync()).Instalments.Count );
-            Assert.Equal(3333, (await dbContext.Payments.FirstAsync()).CardLastDigits );
-            Assert.Equal(20m, (await dbContext.Payments.Include(p => p.Instalments).FirstAsync()).Instalments[0].Ammount);
-            Assert.Equal("Olavo Neto", (await dbContext.Payments.Include(p => p.Customer).FirstAsync() ).Customer.Name );
-
-            //instalments
-            Assert.Equal(5, await dbContext.Instalments.CountAsync());
-            Assert.Equal(20m, (await dbContext.Instalments.FirstAsync()).Ammount);
-            Assert.Equal(customer.Id, (await dbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].CustomerId);
-            Assert.Equal(100m, (await dbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].TotalAmmount);
-            Assert.Equal(4, (await dbContext.Instalments.Include(p => p.Customer).ToListAsync())[3].Number);
-            Assert.NotNull((await dbContext.Instalments.LastAsync()).CreatedAt);
-            Assert.Equal(100,(await dbContext.Instalments.LastAsync()).TotalAmmount);
-            Assert.Equal(5, (await dbContext.Instalments.LastAsync()).TotalOf);
+            Configuration = BuildConfiguration();
+            FakeLogger = BuildLogger();
+            DbContext = new apiContext(Configuration, options);
+            FakeAcquirer = BuildAcquirerApiService();
+            FakeAccount = BuildFakeAccountService(DbContext);
         }
 
         private IAccountApi BuildFakeAccountService(apiContext dbContext)
@@ -124,15 +72,147 @@ namespace tests
             return builder.Build();
         }
 
+        #endregion
+
+        /// <summary>
+        /// Realizar pagamento com cartão de crédito (transação);
+        /// </summary>
+        [Fact]
+        public async Task CreditCardPaymentTest()
+        {
+            SetupTest();
+
+            var customer = new CustomerModel()
+            {
+                Name = "Olavo Neto",
+                Email = "olavo@exodus.eti.br",
+            };
+
+            DbContext.Customers.Add(customer.Map());
+            DbContext.SaveChanges();
+
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+            customer.Id = registeredCustomer.Id;
+
+            var paymentModel = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 100,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+            var before = DateTime.Now;
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var cResponse = await controller.ProcessPayment(paymentModel);
+
+            Assert.IsNotType<PaymentErrorJson>(cResponse);
+
+            Assert.NotNull(cResponse);
+            Assert.Equal(100M, cResponse.Amount);
+            Assert.Equal(5, cResponse.InstalmentsCount);
+            Assert.Null(cResponse.CanceledAt);
+            Assert.Equal(OperatorResponse.Acepted, cResponse.OperatorResponse);
+            Assert.Null(cResponse.TransferDate);
+
+            //pelo contexto
+
+            //Customers
+            Assert.Equal(1, await DbContext.Customers.CountAsync());
+
+            //payment
+            Assert.Equal(1, await DbContext.Payments.CountAsync());
+            Assert.Equal(5, (await DbContext.Payments.Include( p=>p.Instalments).FirstAsync()).Instalments.Count );
+            Assert.Equal(3333, (await DbContext.Payments.FirstAsync()).CardLastDigits );
+            Assert.Equal(20m, (await DbContext.Payments.Include(p => p.Instalments).FirstAsync()).Instalments[0].Ammount);
+            Assert.Equal("Olavo Neto", (await DbContext.Payments.Include(p => p.Customer).FirstAsync() ).Customer.Name );
+
+            //instalments
+            Assert.Equal(5, await DbContext.Instalments.CountAsync());
+            Assert.Equal(20m, (await DbContext.Instalments.FirstAsync()).Ammount);
+            Assert.Equal(0.9m, (await DbContext.Instalments.FirstAsync()).FixedTax);
+            Assert.Equal(0.0m, (await DbContext.Instalments.FirstAsync()).AdvanceTax);
+            Assert.Equal(DateTime.Today.AddDays(30), (await DbContext.Instalments.FirstAsync()).TargetDate);
+            Assert.Equal(DateTime.Today.AddDays(90), (await DbContext.Instalments.ToListAsync())[2].TargetDate);
+            Assert.Equal(DateTime.Today.AddDays(120), (await DbContext.Instalments.ToListAsync())[3].TargetDate);
+            Assert.Equal(DateTime.Today.AddDays(150), (await DbContext.Instalments.LastAsync()).TargetDate);
+
+            Assert.Equal(0.0m, (await DbContext.Instalments.LastAsync()).FixedTax);
+            Assert.Equal(0.0m, (await DbContext.Instalments.LastAsync()).AdvanceTax);
+            Assert.Equal(19.1m, (await DbContext.Instalments.FirstAsync()).NetAmmount);
+            Assert.Equal(customer.Id, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].CustomerId);
+            Assert.Equal(100m, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].AllInstallments);
+            Assert.Equal(4, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[3].Number);
+            Assert.NotNull((await DbContext.Instalments.LastAsync()).CreatedAt);
+            Assert.Equal(100,(await DbContext.Instalments.LastAsync()).AllInstallments);
+            Assert.Equal(5, (await DbContext.Instalments.LastAsync()).TotalOf);
+        }
+
+        
+
         /// <summary>
         /// Consultar transações disponíveis para antecipar 
         /// (Os valores já devem estar calculados, visando transparência 
         /// e possibilitando o planejamento financeiro do nosso cliente);
         /// </summary>
         [Fact]
-        public void CheckAvailablePaymentsTest()
+        public async Task CheckAvailablePaymentsTest()
         {
+            SetupTest();
 
+            var customer = new CustomerModel()
+            {
+                Name = "Olavo Neto",
+                Email = "olavo@exodus.eti.br",
+            };
+
+            DbContext.Customers.Add(customer.Map());
+            DbContext.SaveChanges();
+
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+            customer.Id = registeredCustomer.Id;
+
+            var paymentModel = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 100,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+            var before = DateTime.Now;
+
+            var paymentModel2 = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 150,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var cResponse1 = await controller.ProcessPayment(paymentModel);
+            var cResponse2 = await controller.ProcessPayment(paymentModel2);
+
+            var paymentListModel = new PaymentListModel()
+            {
+                AuthToken = waiToken
+            };
+            var cResponse3 = await controller.ListAvailableForAdvance(paymentListModel);
+            Assert.Equal(2, cResponse3.Count);
         }
 
         /// <summary>
@@ -147,9 +227,68 @@ namespace tests
         /// são mantidas as seguintes informações:
         /// </remarks>
         [Fact]
-        public void RequestAdvancePaymentTest()
+        public async Task RequestForAdvancePaymentTest()
         {
+            SetupTest();
 
+            var customer = new CustomerModel()
+            {
+                Name = "Olavo Neto",
+                Email = "olavo@exodus.eti.br",
+            };
+
+            DbContext.Customers.Add(customer.Map());
+            DbContext.SaveChanges();
+
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+            customer.Id = registeredCustomer.Id;
+
+            var paymentModel = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 100,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+            var before = DateTime.Now;
+
+            var paymentModel2 = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 150,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            await controller.ProcessPayment(paymentModel);
+            await controller.ProcessPayment(paymentModel2);
+
+            var paymentListModel = new PaymentListModel()
+            {
+                AuthToken = waiToken
+            };
+            var firstPaymentForAdvance = 
+                new AdvanceListModel()
+                {
+                    AuthToken = waiToken,
+                    Payments = new[] { (await controller.ListAvailableForAdvance(paymentListModel)).Payments.First() }.Select(q => q.Id)
+                };
+
+            var adv = await controller.RequestForAdvance(firstPaymentForAdvance);
+            Assert.Equal(150, adv.GrossAmount);
+            var percentTax = 0.038m;
+            var instalment = decimal.Divide(150, 5);
+            Assert.Equal(150m - 0.9m - (1m* percentTax) * instalment - (2m * percentTax) * instalment - (3m * percentTax) * instalment - (4m * percentTax) * instalment - (5m * percentTax) * instalment, adv.NetAmount);
         }
 
         /// <summary>

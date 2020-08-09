@@ -1,5 +1,6 @@
 ﻿using api.Models.EntityModel;
 using System;
+using System.Collections.Generic;
 
 namespace api.Model
 {
@@ -28,7 +29,7 @@ namespace api.Model
         /// <summary>
         /// Total do Pagamento
         /// </summary>
-        public decimal TotalAmmount { get; set; }
+        public decimal AllInstallments { get; set; }
 
         /// <summary>
         /// Data do Pagamento
@@ -56,5 +57,25 @@ namespace api.Model
         public Customer Customer { get; set; }
 
         public Payment Payment { get; set; }
+
+        /// <summary>
+        /// Data Alvo para Pagamento
+        /// </summary>
+        public DateTime TargetDate { get; set; }
+
+        /// <summary>
+        /// Taxa Fixa
+        /// </summary>
+        public decimal FixedTax { get; set; }
+
+        /// <summary>
+        /// Taxa de Antecipação Aplicada
+        /// </summary>
+        public decimal AdvanceTax { get; set; }
+
+        /// <summary>
+        /// Líquido a Receber
+        /// </summary>
+        public decimal NetAmmount { get => Ammount - FixedTax - AdvanceTax; }
     }
 }

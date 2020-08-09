@@ -43,7 +43,13 @@ namespace api.Models.EntityModel
         /// <summary>
         /// Valor total das transações solicitadas para antecipação(já descontado a taxa fixa);
         /// </summary>
-        public decimal TotalAmount { get; set; }
+        public decimal GrossAmount { get; set; }
+
+
+        /// <summary>
+        /// Valor líquido das transações solicitadas para antecipação(já descontado a taxa fixa);
+        /// </summary>
+        public decimal NetAmount { get; set; }
 
         /// <summary>
         /// Valor total do repasse(descontado a taxa fixa e a taxa da antecipação)
@@ -54,6 +60,7 @@ namespace api.Models.EntityModel
         /// Lista de transações solicitadas na antecipação.
         /// </summary>
         public List<Payment> Payments { get; set; }
-
+        public decimal FixedTaxes { get; set; }
+        public decimal AdvanceTaxes { get; set; }
     }
 }

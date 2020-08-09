@@ -23,7 +23,7 @@ namespace api.Models.EntityModel
             entity.Property(p => p.AdvanceDue).HasColumnName("TotalRepasse").HasColumnType("decimal(8,2)").IsRequired();
             entity.Property(p => p.IsApproved).HasColumnName("DataRepasse");
             
-            entity.Property(p => p.TotalAmount).HasColumnName("Valor").HasColumnType("decimal(8,2)");
+            entity.Property(p => p.GrossAmount).HasColumnName("Valor").HasColumnType("decimal(8,2)");
 
             entity.HasMany(a => a.Payments)
                 .WithOne()

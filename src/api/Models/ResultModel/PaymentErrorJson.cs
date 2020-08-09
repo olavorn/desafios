@@ -5,11 +5,11 @@ namespace api.Controllers
 {
     public class PaymentErrorJson : PaymentJson
     {
-        private PaymentProcessing cardTransactionProcessing;
+        private PaymentProcessing _cardTransactionProcessing;
 
         public PaymentErrorJson(PaymentProcessing cardTransactionProcessing)
         {
-            this.cardTransactionProcessing = cardTransactionProcessing;
+            this._cardTransactionProcessing = cardTransactionProcessing;
         }
     }
 }

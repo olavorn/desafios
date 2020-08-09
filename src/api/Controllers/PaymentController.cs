@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using api.Extensions;
 using api.Model;
 using api.Models.EntityModel;
 using api.Models.IntegrationModel;
@@ -9,6 +10,7 @@ using api.Models.ResultModel;
 using api.Models.ServiceModel;
 using api.Models.ViewModel;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace api.Controllers
@@ -66,6 +68,56 @@ namespace api.Controllers
             return new PaymentJson(payment);
         }
 
+        [HttpPost, Route("request-advance")]
+        public async Task<AdvanceJson> RequestForAdvance([FromBody] AdvanceListModel model)
+        {
+            var advProcessing = new AdvanceProcessing(_context, _acquirerApi, _accountApi, _log);
+            var advance = model.Map();
+
+            try
+            {
+                advance = await advProcessing.Request(advance, model.AuthToken);
+            }
+            catch(Exception)
+            {
+                return new AdvanceErrorJson(advProcessing);
+            }
+
+            await _context.SaveChangesAsync();
+            return new AdvanceJson(advance);
+        }
+
+        [HttpGet, Route("available-for-advance")]
+        public async Task<PaymentListJson> ListAvailableForAdvance([FromQuery] PaymentListModel model)
+        {
+            var wai = await _accountApi.WhoAmI(model.AuthToken);
+
+            var paymentQuery = _context.Payments
+                 .WhereDateFrom(model.StartDate)
+                 .WhereDateUntil(model.EndDate)
+                 .WherePayerName(model.CardName)
+                 .WherePaidDateFrom(model.StartPaidDate)
+                 .WherePaidDateFrom(model.EndPaidDate)
+                 .WhereStatus(model.Status)
+                 .Where( q=> q.AdvanceId == null && q.CustomerId == wai.CustomerId);
+
+            paymentQuery = paymentQuery
+                .OrderByDescending(q => q.CreatedAt).AsQueryable();
+
+            if (model.Index.HasValue)
+                paymentQuery = paymentQuery.Skip(model.Index.Value);
+
+            if (model.Length.HasValue)
+                paymentQuery = paymentQuery.Take(model.Length.Value);
+
+            var payments = await paymentQuery.ToListAsync();
+
+            //var periodAmount = await paymentQuery.SumAsync(payment => payment.Amount);
+            var count = await paymentQuery.LongCountAsync();
+
+            return new PaymentListJson(payments, count);
+        }
+
         // PUT api/values/5
         [HttpPut("{id}")]
         public void Put(int id, [FromBody] string value)
@@ -77,5 +129,6 @@ namespace api.Controllers
         public void Delete(int id)
         {
         }
+
     }
 }
