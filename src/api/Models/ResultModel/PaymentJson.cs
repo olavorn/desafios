@@ -17,12 +17,12 @@ namespace api.Models.ResultModel
             Id = payment.Id;
             Amount = payment.Amount;
             CardLastDigits = payment.CardLastDigits;
-            InstallmentsCount = payment.InstallmentsCount;
+            InstalmentsCount = payment.InstalmentsCount;
             OperatorResponse = payment.OperatorResponse;
-            PaidAt = payment.PaidAt;
+            PaidAt = payment.CreatedAt;
             Result = payment.Result;
             Status = payment.Status;
-            TransferDate = payment.TransferDate;
+            TransferDate = payment.PaidAt;
             TransferDue = payment.TransferDue;
             Amount = payment.Amount;
         }
@@ -32,7 +32,7 @@ namespace api.Models.ResultModel
         public DateTime? CanceledAt { get; set; }
         public decimal Amount { get; set; }
         public short CardLastDigits { get; set; }
-        public int InstallmentsCount { get; set; }
+        public int InstalmentsCount { get; set; }
         public OperatorResponse OperatorResponse { get; set; }
         public DateTime? PaidAt { get; set; }
         public PaymentResponse Result { get; set; }

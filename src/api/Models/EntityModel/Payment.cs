@@ -1,6 +1,8 @@
-﻿using api.Models.Enums;
+﻿using api.Models.EntityModel;
+using api.Models.Enums;
 using System;
-
+using System.Collections.Generic;
+using System.Linq;
 
 namespace api.Model
 {
@@ -16,12 +18,17 @@ namespace api.Model
     /// O pagamento da taxa fixa é feito apenas na primeira parcela, 
     /// então para esse exemplo o lojista receberia na primeira parcela R$49,10 e na segunda R$50,00.
     /// </example>
-    public class Payment
+    public class Payment : ICardTransaction
     {
         /// <summary>
         /// Código identificador numérico;
         /// </summary>
-        public int Id { get; set; }
+        public long Id { get; set; }
+
+        /// <summary>
+        /// Código identificador numérico;
+        /// </summary>
+        public Guid CustomerId { get; set; }
 
         /// <summary>
         /// O trâmite de uma solicitação de antecipação progride através de etapas;
@@ -41,7 +48,7 @@ namespace api.Model
         /// <summary>
         /// Data em que a transação foi efetuada;
         /// </summary>
-        public DateTime? PaidAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
         /// <summary>
         /// Confirmação da adquirente (aprovada ou recusada);
@@ -56,22 +63,62 @@ namespace api.Model
         /// <summary>
         /// Data do repasse (caso já tenha ocorrido);
         /// </summary>
-        public DateTime? TransferDate { get; set; }
+        public DateTime? PaidAt { get; set; }
 
         /// <summary>
         /// Valor do repasse (valor da transação subtraído a taxa fixa);
         /// </summary>
-        public decimal? TransferDue { get; set; }
+        public decimal? TransferDue { get => Instalments?.Where(q => q.PaidAt != null).Sum(q => q.Ammount); }
 
         /// <summary>
         /// Número de parcelas
         /// </summary>
-        public int InstallmentsCount { get; set; }
+        public short InstalmentsCount { get; set; }
+
+        /// <summary>
+        /// Nome no Cartão
+        /// </summary>
+        public string CardName { get; set; }
+
+        /// <summary>
+        /// Card Expiration Date
+        /// </summary>
+        public string CardExpirationDate { get; set; }
+
+        /// <summary>
+        /// Card Security Number
+        /// </summary>
+        public string CardSecurityNumber { get; set; }
+
+        /// <summary>
+        /// Dígitos do cartão (na requisição, o número do cartão deve conter 16 caracteres numéricos, sem espaços)
+        /// </summary>
+        public string CardDigits { get; set; }
 
         /// <summary>
         /// Quatro últimos dígitos do cartão (na requisição, o número do cartão deve conter 16 caracteres numéricos, sem espaços)
         /// </summary>
         public short CardLastDigits { get; set; }
+
+        /// <summary>
+        /// Referência de Antecipação
+        /// </summary>
+        public Advance Advance { get; set; }
+
+        /// <summary>
+        /// Chave Referência de Antecipação
+        /// </summary>
+        public long AdvanceId { get; set; }
+
+        /// <summary>
+        /// Parcelas
+        /// </summary>
+        public List<Instalment> Instalments { get; set; }
+
+        /// <summary>
+        /// Cliente
+        /// </summary>
+        public Customer Customer { get; set; }
     }
    
 }

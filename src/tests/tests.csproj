@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
@@ -7,7 +7,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="appsettings.Development.json" />
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.Development.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
   </ItemGroup>
@@ -15,9 +32,12 @@
   <ItemGroup>
     <Folder Include="Factories\EntityModel\" />
     <Folder Include="Factories\ViewModel\" />
-    <Folder Include="Fakes\" />
     <Folder Include="Functional\" />
     <Folder Include="Http\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\api\api.csproj" />
   </ItemGroup>
 
 </Project>

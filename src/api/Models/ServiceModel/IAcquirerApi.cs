@@ -1,10 +1,11 @@
 ﻿using api.Model;
+using api.Models.EntityModel;
 using System.Threading.Tasks;
 
 namespace api.Models.ServiceModel
 {
-    internal interface IAcquirerApi
+    public interface IAcquirerApi
     {
-        Task Process(Payment payment);
+        Task Process(ICardTransaction payment);
     }
 }

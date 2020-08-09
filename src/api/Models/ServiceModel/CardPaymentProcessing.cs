@@ -1,4 +1,5 @@
 ﻿using api.Model;
+using api.Models.EntityModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,35 +9,23 @@ namespace api.Models.ServiceModel
 {
     public class CardPaymentProcessing
     {
-        private ApiDbContext _dbContext;
+        private apiContext _dbContext;
         private IAcquirerApi _acquirerApi;
 
-        public CardPaymentProcessing(ApiDbContext dbContext, IAcquirerApi acquirerApi)
+        public CardPaymentProcessing(apiContext dbContext, IAcquirerApi acquirerApi)
         {
             _dbContext = dbContext;
             _acquirerApi = acquirerApi;
         }
 
-        public Payment Payment { get; private set; }
-        public bool Reproved { get; private set; }
+        public bool Approved { get; private set; }
         public bool CardNotSupported { get; private set; }
 
-        public async Task<bool> Process(Payment payment)
+        public async Task<bool> Process(ICardTransaction payment)
         {
-            Payment = payment;
+            await _acquirerApi.Process(payment).ConfigureAwait(false);
 
-            await _acquirerApi.Process(Payment);
-
-            CardNotSupported = Payment.CardTransaction == null;
-            if (CardNotSupported) return false;
-
-            Reproved = Payment.CardTransaction.ReprovedAt != null;
-            if (Reproved) return false;
-
-            _dbContext.Payments.Add(Payment);
-            await _dbContext.SaveChangesAsync();
-
-            return true;
+            return payment.Result == Enums.PaymentResponse.Approved;
         }
     }
 }
