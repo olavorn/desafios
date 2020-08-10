@@ -32,6 +32,14 @@ namespace api.Controllers
             _log = log;
         }
 
+        [HttpPost, Route("login")]
+        public async Task<dynamic> Login([FromQuery]AccountLoginModel model)
+        {
+            var wai = await _context.Users.FirstOrDefaultAsync(q=> q.Email == model.Login);
+
+            return new { Token = wai.MapToWhoAdminAmI().EncryptToken() };
+        }
+
         [HttpGet, Route("list-advance-requests")]
         public async Task<AdvanceListJson> ListAdvanceRequests([FromQuery]AdvanceListModel model)
         {

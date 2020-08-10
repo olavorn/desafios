@@ -23,7 +23,7 @@ namespace api.Models.EntityModel
             entity.Property(p => p.OperatorResponse).HasColumnName("ConfirmacaoAdquirente");
             entity.Property(p => p.Amount).HasColumnName("Valor").HasColumnType("decimal(8,2)");
             entity.Property(p => p.CardLastDigits).HasColumnName("DigitosCartao").HasColumnType("smallint");
-            entity.Property(p => p.CardExpirationDate).HasColumnName("DigitosCartao").HasColumnType("varchar(7)");
+            entity.Property(p => p.CardExpirationDate).HasColumnName("ExpiracaoCartao").HasColumnType("varchar(7)");
             entity.Property(p => p.CardName).HasColumnName("NomeCartao").HasColumnType("varchar(255)");
 
             entity.HasMany(p => p.Instalments)
