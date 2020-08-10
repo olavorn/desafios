@@ -2,6 +2,7 @@
 using api.Model;
 using api.Models.EntityModel;
 using api.Models.IntegrationModel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -54,6 +55,8 @@ namespace api.Models.ServiceModel
                         decimal _advanceTax = GetAdvanceTaxRate(DateTime.Now, instalment.TargetDate);
                         advance.AdvanceTaxes += instalment.Ammount * _advanceTax;
                     }
+
+                    pay.Status = Enums.PaymentStatus.Waiting;
                 }
 
                 advance.NetAmount = advance.GrossAmount - advance.FixedTaxes - advance.AdvanceTaxes;
@@ -76,16 +79,44 @@ namespace api.Models.ServiceModel
             if (admin == null)
                 return null;
 
-            var adv = _dbContext.Advances.Single(q => q.Id == advance.Id);
+            var adv = _dbContext.Advances.Include(q => q.Payments).Single(q => q.Id == advance.Id);
             adv.EvaluationDateStart = DateTime.Now;
             adv.EvaluationBy = admin.AdminId;
+
+            foreach (var p in adv.Payments)
+                p.Status = Enums.PaymentStatus.InAnalisys;
 
             return adv;
         }
 
-        public Task<Advance> EndEvaluation(Advance advance, bool isApproved, string authToken)
+        public async Task<Advance> EndEvaluation(Advance advance, bool isApproved, string authAdminToken)
         {
-            throw new NotImplementedException();
+            var admin = await _account.WhoAdminAmI(authAdminToken);
+
+            if (admin == null)
+                return null;
+
+            var adv = _dbContext.Advances.Include( q=> q.Payments ).ThenInclude(p => p.Instalments).Single(q => q.Id == advance.Id);
+            adv.EvaluationDateEnd = DateTime.Now;
+            adv.EvaluationBy = admin.AdminId;
+            adv.IsApproved = isApproved;
+            
+            if (adv.IsApproved.GetValueOrDefault())
+            {
+                foreach (var p in adv.Payments)
+                {
+                    foreach ( var i in p.Instalments)
+                    {
+                        decimal _advanceTaxRate = GetAdvanceTaxRate(adv.RequestDate, i.TargetDate);
+                        i.PaidAt = DateTime.Now;
+                        i.AdvanceTax = i.Ammount * _advanceTaxRate;
+                    }
+                    p.Status = Enums.PaymentStatus.Done;
+                    p.PaidAt = DateTime.Now;
+                }
+            }
+
+            return adv;
         }
 
         private decimal GetAdvanceTaxRate(DateTime referenceDate, DateTime targetDate)
