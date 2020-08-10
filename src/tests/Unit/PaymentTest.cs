@@ -4,6 +4,7 @@ using api.Model;
 using api.Models.EntityModel;
 using api.Models.Enums;
 using api.Models.IntegrationModel;
+using api.Models.ResultModel;
 using api.Models.ServiceModel;
 using api.Models.ViewModel;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,12 @@ using Xunit;
 
 namespace tests
 {
+    /// <summary>
+    /// Classe de Testes
+    /// </summary>
+    /// <remarks>
+    /// Testes funcionando, porém é necessário rodá-los 1 a 1
+    /// </remarks>
     public class PaymentTest
     {
         #region Setup
@@ -416,6 +423,7 @@ namespace tests
         [Fact]
         public async Task RequestAdvanceOnceTest()
         {
+            //load the context
             await GetAdvancePaymentRequestDetailsTest();
 
             var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
@@ -431,7 +439,7 @@ namespace tests
             var seccondPaymentForAdvance = new AdvanceListModel()
             {
                 AuthToken = waiToken,
-                Payments = new[] { (await controller.ListAvailableForAdvance(paymentListModel)).Payments.ToList()[1] }.Select(q => q.Id)
+                Payments = new[] { (await controller.ListAvailableForAdvance(paymentListModel)).Payments.ToList()[0] }.Select(q => q.Id)
             };
 
             var adv2 = await controller.RequestForAdvance(seccondPaymentForAdvance);
@@ -439,19 +447,68 @@ namespace tests
         }
 
         /// <summary>
-        /// Aprovar ou reprovar uma solicitação de antecipação;
+        /// Aprovar uma solicitação de antecipação;
         /// </summary>
-        public void AproveRejectPaymentTest()
+        [Fact]
+        public async Task AprovePaymentTestAsync()
         {
+            await BeginAdvancePaymentRequestEvaluationTest();
+            var registeredAdmin = await DbContext.Users.FirstOrDefaultAsync();
+            var waiAdminToken = registeredAdmin.MapToWhoAdminAmI().EncryptToken();
 
+            AdminController controller = new AdminController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var evaluationModel = new AdvanceEvaluationModel()
+            {
+                AuthToken = waiAdminToken,
+                IsApproved = true ,
+                Id = 1
+            };
+            var adv2 = await controller.EndAdvanceEvaluation(evaluationModel);
+            Assert.IsType<AdvanceJson>(adv2);
+        }
+
+        /// <summary>
+        /// reprovar uma solicitação de antecipação;
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task RejectPaymentTestAsync()
+        {
+            await BeginAdvancePaymentRequestEvaluationTest();
+            var registeredAdmin = await DbContext.Users.FirstOrDefaultAsync();
+            var waiAdminToken = registeredAdmin.MapToWhoAdminAmI().EncryptToken();
+
+            AdminController controller = new AdminController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var evaluationModel = new AdvanceEvaluationModel()
+            {
+                AuthToken = waiAdminToken,
+                IsApproved = false,
+                Id = 1
+            };
+            var adv2 = await controller.EndAdvanceEvaluation(evaluationModel);
+            Assert.IsType<AdvanceJson>(adv2);
         }
 
         /// <summary>
         /// Consultar histórico das solicitações realizadas em um determinado período(devendo retornar, também, a lista de transações da antecipação).
         /// </summary>
-        public void RequestPaymentHistoryTest()
+        [Fact]
+        public async Task RequestPaymentHistoryTestAsync()
         {
+            await AprovePaymentTestAsync();
 
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var phr = await controller.ListPaymentHistory(new PaymentListModel()
+            {
+                AuthToken = waiToken,
+                StartDate = DateTime.Today.AddDays(-30),
+                EndDate = DateTime.Today.AddDays(30)
+            });
+
+            Assert.Equal(DbContext.Payments.Count(), phr.Count);
         }
 
 

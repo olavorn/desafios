@@ -32,27 +32,6 @@ namespace api.Controllers
             _log = log;
         }
 
-
-        // GET api/values
-        [HttpGet]
-        public ActionResult<IEnumerable<string>> Get()
-        {
-            return new string[] { "transaction", "transaction2" };
-        }
-
-        // GET api/values/5
-        [HttpGet("{id}")]
-        public ActionResult<string> Get(int id)
-        {
-            return "value";
-        }
-
-        // POST api/values
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
         [HttpPost, Route("pay-with-card")]
         public async Task<PaymentJson> ProcessPayment([FromBody] PaymentModel model)
         {
@@ -77,13 +56,13 @@ namespace api.Controllers
             try
             {
                 advance = await advProcessing.Request(advance, model.AuthToken);
+                await _context.SaveChangesAsync();
             }
             catch(Exception ex)
             {
                 return new AdvanceErrorJson(ex.Message);
             }
 
-            await _context.SaveChangesAsync();
             return new AdvanceJson(advance);
         }
 
@@ -127,16 +106,35 @@ namespace api.Controllers
             return new PaymentListJson(payments, count);
         }
 
-        // PUT api/values/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        [HttpGet, Route("payment-history")]
+        public async Task<PaymentListJson> ListPaymentHistory([FromQuery] PaymentListModel model)
         {
-        }
+            var wai = await _accountApi.WhoAmI(model.AuthToken);
 
-        // DELETE api/values/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
+            var paymentQuery = _context.Payments
+                 .WhereDateFrom(model.StartDate)
+                 .WhereDateUntil(model.EndDate)
+                 .WherePayerName(model.CardName)
+                 .WherePaidDateFrom(model.StartPaidDate)
+                 .WherePaidDateFrom(model.EndPaidDate)
+                 //.WhereStatus(model.Status)
+                 .Where(q => q.CustomerId == wai.CustomerId);
+
+            paymentQuery = paymentQuery
+                .OrderByDescending(q => q.CreatedAt).AsQueryable();
+
+            if (model.Index.HasValue)
+                paymentQuery = paymentQuery.Skip(model.Index.Value);
+
+            if (model.Length.HasValue)
+                paymentQuery = paymentQuery.Take(model.Length.Value);
+
+            var payments = await paymentQuery.ToListAsync();
+
+            //var periodAmount = await paymentQuery.SumAsync(payment => payment.Amount);
+            var count = await paymentQuery.LongCountAsync();
+
+            return new PaymentListJson(payments, count);
         }
 
     }

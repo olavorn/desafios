@@ -32,12 +32,12 @@ namespace api.Models.ServiceModel
 
         public async Task<Advance> Request(Advance advance, string token)
         {
-            if (_dbContext.Advances.Any(q => q.IsApproved == null && q.EvaluationDateStart.HasValue))
-                throw new Exception("Advance Already Queued. There can be only one Request queued for evaluation at a time.");
-
             try
             {
                 var customer = await _account.WhoAmI(token);
+
+                if (_dbContext.Advances.Any(q => q.CustomerId == customer.CustomerId && q.IsApproved == null ))
+                    throw new Exception("Advance Already Queued. There can be only one Request queued for evaluation at a time.");
 
                 advance.CustomerId = customer.CustomerId;
                 advance.RequestDate = DateTime.UtcNow;
@@ -68,7 +68,7 @@ namespace api.Models.ServiceModel
             catch(Exception ex)
             {
                 _log.LogError(ex, "There was an error while processing the Payment Request" );
-                return null;
+                throw;
             }
         }
 
