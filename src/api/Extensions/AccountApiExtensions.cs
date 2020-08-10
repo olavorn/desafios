@@ -16,6 +16,11 @@ namespace api.Extensions
             return Newtonsoft.Json.JsonConvert.DeserializeObject<WhoAmI>(Encoding.UTF8.GetString(Convert.FromBase64String(token)));
         }
 
+        public static WhoAdminAmI TranslateAdminToken(this string adminToken)
+        {
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<WhoAdminAmI>(Encoding.UTF8.GetString(Convert.FromBase64String(adminToken)));
+        }
+
         public static WhoAmI MapToWhoAmI(this Customer customer)
         {
             return new WhoAmI()
@@ -23,6 +28,17 @@ namespace api.Extensions
                 CustomerId = customer.Id,
                 Email = customer.Email,
                 Name = customer.Name,
+                SessionId = new Random().Next(99999).ToString()
+            };
+        }
+
+        public static WhoAdminAmI MapToWhoAdminAmI(this User user)
+        {
+            return new WhoAdminAmI()
+            {
+                AdminId = user.Id,
+                Email = user.Email,
+                Name = user.Name,
                 SessionId = new Random().Next(99999).ToString()
             };
         }

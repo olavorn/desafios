@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 
 namespace api.Models.IntegrationModel
 {
-    public interface IAccountApi
+    public class WhoAdminAmI : WhoAmI
     {
-        Task<WhoAmI> WhoAmI(string token);
-        Task<WhoAdminAmI> WhoAdminAmI(string token);
+        public Guid AdminId { get; set; }
     }
 }

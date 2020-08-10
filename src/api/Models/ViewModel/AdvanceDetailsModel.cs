@@ -10,16 +10,16 @@ using System.Threading.Tasks;
 
 namespace api.Models.ViewModel
 {
-    public class AdvanceListModel : AuthenticatedModel
+    public class AdvanceDetailsModel : AuthenticatedModel
     {
-        [Display(Name = "payments"), JsonRequired]
-        public IEnumerable<long> Payments { get; set; }
+        [Display(Name = "id"), JsonRequired, JsonCurrency]
+        public long Id { get; set; }
 
-        internal Advance Map()
+        public virtual Advance Map()
         {
             return new Advance()
             {
-                Payments = Payments.Select(q => new Payment() { Id = q }).ToList()
+                Id = this.Id
             };
         }
     }

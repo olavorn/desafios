@@ -62,5 +62,6 @@ namespace api.Models.EntityModel
         public List<Payment> Payments { get; set; }
         public decimal FixedTaxes { get; set; }
         public decimal AdvanceTaxes { get; set; }
+        public Guid? EvaluationBy { get; set; }
     }
 }

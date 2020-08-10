@@ -5,11 +5,11 @@ namespace api.Controllers
 {
     public class AdvanceErrorJson : AdvanceJson
     {
-        private AdvanceProcessing _advanceProcessing;
+        private string _errorMessage;
 
-        public AdvanceErrorJson(AdvanceProcessing advanceProcessing)
+        public AdvanceErrorJson(string errorMessage)
         {
-            this._advanceProcessing = advanceProcessing;
+            this._errorMessage = errorMessage;
         }
     }
 }

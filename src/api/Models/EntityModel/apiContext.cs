@@ -17,6 +17,7 @@ namespace api.Models.EntityModel
         }
 
         public DbSet<Customer> Customers { get; set; }
+        public DbSet<User> Users { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Advance> Advances { get; set; }
         public DbSet<Instalment> Instalments { get; set; }

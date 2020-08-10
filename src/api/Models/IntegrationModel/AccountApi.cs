@@ -49,8 +49,22 @@ namespace api.Models.IntegrationModel
                 return _dbContext.Customers.FirstOrDefault(q => q.Id == wai.CustomerId).MapToWhoAmI();
             }
         }
-        
-    }
 
-    
+        public async Task<WhoAdminAmI> WhoAdminAmI(string token)
+        {
+            if (!_options.UseInternal)
+            {
+                _httpClient.DefaultRequestHeaders.Add("Authorization", token);
+
+                var response = await _httpClient.PostAsJsonAsync(_options.WhoAmIUrl, token);
+
+                return response.IsSuccessStatusCode ? await response.Content.ReadAsJsonAsync<WhoAdminAmI>() : null;
+            }
+            else
+            {
+                var wai = token.TranslateAdminToken();
+                return _dbContext.Users.FirstOrDefault(q => q.Id == wai.AdminId).MapToWhoAdminAmI();
+            }
+        }
+    }
 }

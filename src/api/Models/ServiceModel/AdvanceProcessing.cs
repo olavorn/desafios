@@ -31,6 +31,9 @@ namespace api.Models.ServiceModel
 
         public async Task<Advance> Request(Advance advance, string token)
         {
+            if (_dbContext.Advances.Any(q => q.IsApproved == null && q.EvaluationDateStart.HasValue))
+                throw new Exception("Advance Already Queued. There can be only one Request queued for evaluation at a time.");
+
             try
             {
                 var customer = await _account.WhoAmI(token);
@@ -64,6 +67,25 @@ namespace api.Models.ServiceModel
                 _log.LogError(ex, "There was an error while processing the Payment Request" );
                 return null;
             }
+        }
+
+        public async Task<Advance> BeginEvaluation(Advance advance, string authAdminToken)
+        {
+            var admin = await _account.WhoAdminAmI(authAdminToken);
+
+            if (admin == null)
+                return null;
+
+            var adv = _dbContext.Advances.Single(q => q.Id == advance.Id);
+            adv.EvaluationDateStart = DateTime.Now;
+            adv.EvaluationBy = admin.AdminId;
+
+            return adv;
+        }
+
+        public Task<Advance> EndEvaluation(Advance advance, bool isApproved, string authToken)
+        {
+            throw new NotImplementedException();
         }
 
         private decimal GetAdvanceTaxRate(DateTime referenceDate, DateTime targetDate)

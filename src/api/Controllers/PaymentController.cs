@@ -78,12 +78,21 @@ namespace api.Controllers
             {
                 advance = await advProcessing.Request(advance, model.AuthToken);
             }
-            catch(Exception)
+            catch(Exception ex)
             {
-                return new AdvanceErrorJson(advProcessing);
+                return new AdvanceErrorJson(ex.Message);
             }
 
             await _context.SaveChangesAsync();
+            return new AdvanceJson(advance);
+        }
+
+        [HttpGet, Route("advance-details")]
+        public async Task<AdvanceJson> GetAdvanceDetails([FromQuery] AdvanceDetailsModel model)
+        {
+            var wai = await _accountApi.WhoAmI(model.AuthToken);
+            var advance = _context.Advances.Include(q => q.Payments).SingleOrDefault(q => q.CustomerId == wai.CustomerId && q.Id == model.Id);
+
             return new AdvanceJson(advance);
         }
 

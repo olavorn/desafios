@@ -20,6 +20,7 @@ namespace api.Models.ResultModel
             CustomerId = advance.CustomerId;
             EvaluationDateEnd = advance.EvaluationDateEnd;
             EvaluationDateStart = advance.EvaluationDateStart;
+            EvaluationBy = advance.EvaluationBy;
             IsApproved = advance.IsApproved;
             Payments = advance.Payments;
             RequestDate = advance.RequestDate;
@@ -41,6 +42,7 @@ namespace api.Models.ResultModel
         public decimal NetAmount { get; set; }
         public decimal FixedTaxes { get; set; }
         public decimal AdvanceTaxes { get; set; }
+        public Guid? EvaluationBy { get; set; }
 
         public Task ExecuteResultAsync(ActionContext context)
         {

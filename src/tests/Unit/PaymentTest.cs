@@ -295,8 +295,81 @@ namespace tests
         /// Consultar os detalhes da solicitação em andamento(devendo retornar, também, a lista de transações da antecipação);
         /// </summary>
         [Fact]
-        public void GetAdvancePaymentRequestDetailsTest()
+        public async Task GetAdvancePaymentRequestDetailsTest()
         {
+            SetupTest();
+
+            #region ContextSetup 
+
+            var customer = new CustomerModel()
+            {
+                Name = "Olavo Neto",
+                Email = "olavo@exodus.eti.br",
+            };
+
+            DbContext.Customers.Add(customer.Map());
+            DbContext.SaveChanges();
+
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+            customer.Id = registeredCustomer.Id;
+
+            var paymentModel = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 100,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+            var before = DateTime.Now;
+
+            var paymentModel2 = new PaymentModel()
+            {
+                Customer = customer,
+                Amount = 150,
+                InstalmentsCount = 5,
+                CardNumber = "5555111122223333",
+                CardExpirationDate = "08/2021",
+                CardName = "OLAVO DE SOUZA ROCHA NETO",
+                CardSecurityNumber = "558",
+                AuthToken = waiToken
+            };
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            await controller.ProcessPayment(paymentModel);
+            await controller.ProcessPayment(paymentModel2);
+
+            var paymentListModel = new PaymentListModel()
+            {
+                AuthToken = waiToken
+            };
+            var firstPaymentForAdvance =
+                new AdvanceListModel()
+                {
+                    AuthToken = waiToken,
+                    Payments = new[] { (await controller.ListAvailableForAdvance(paymentListModel)).Payments.First() }.Select(q => q.Id)
+                };
+
+            var adv = await controller.RequestForAdvance(firstPaymentForAdvance);
+
+            #endregion
+
+            var adModel = new AdvanceDetailsModel()
+            {
+                AuthToken = waiToken,
+                Id = adv.Id
+            };
+            var radv = await controller.GetAdvanceDetails(adModel);
+            Assert.Equal(radv.Id, adModel.Id);
+            Assert.Single(radv.Payments);
+
+            var percentTax = 0.038m;
+            var instalment = decimal.Divide(150, 5);
+            Assert.Equal(150m - 0.9m - (1m * percentTax) * instalment - (2m * percentTax) * instalment - (3m * percentTax) * instalment - (4m * percentTax) * instalment - (5m * percentTax) * instalment, adv.NetAmount);
 
         }
 
@@ -304,9 +377,65 @@ namespace tests
         /// Iniciar o atendimento da solicitação de antecipação;
         /// </summary>
         [Fact]
-        public void BeginAdvancePaymentRequestEvaluationTest()
+        public async Task BeginAdvancePaymentRequestEvaluationTest()
         {
+            await GetAdvancePaymentRequestDetailsTest();
 
+            var admin = new User()
+            {
+                Name = "Administrador",
+                Email = "admin@pagcerto.com.br",
+                IsActive = true,
+            };
+
+            DbContext.Users.Add(admin);
+            DbContext.SaveChanges();
+
+            var registeredAdmin = await DbContext.Users.FirstOrDefaultAsync();
+            var waiAdminToken = registeredAdmin.MapToWhoAdminAmI().EncryptToken();
+
+            AdminController controller = new AdminController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            var model = new AdvanceEvaluationModel()
+            {
+                AuthToken = waiAdminToken,
+                Id = 1
+            };
+
+            var advance = await controller.BeginAdvanceEvaluation(model);
+
+            Assert.NotNull(advance.EvaluationDateStart);
+            Assert.Null(advance.EvaluationDateEnd);
+            Assert.True(DateTime.Now.AddMinutes(-1) < advance.EvaluationDateStart);
+            Assert.Equal(admin.Id, advance.EvaluationBy);
+            Assert.Equal(1, advance.Id);
+        }
+
+        /// <summary>
+        /// Não é possível iniciar um Adiantamento enquanto um pedido estiver em aberto
+        /// </summary>
+        [Fact]
+        public async Task RequestAdvanceOnceTest()
+        {
+            await GetAdvancePaymentRequestDetailsTest();
+
+            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
+
+            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+
+            var paymentListModel = new PaymentListModel()
+            {
+                AuthToken = waiToken
+            };
+
+            var seccondPaymentForAdvance = new AdvanceListModel()
+            {
+                AuthToken = waiToken,
+                Payments = new[] { (await controller.ListAvailableForAdvance(paymentListModel)).Payments.ToList()[1] }.Select(q => q.Id)
+            };
+
+            var adv2 = await controller.RequestForAdvance(seccondPaymentForAdvance);
+            Assert.IsType<AdvanceErrorJson>(adv2);
         }
 
         /// <summary>

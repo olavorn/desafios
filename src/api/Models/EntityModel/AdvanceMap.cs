@@ -20,6 +20,7 @@ namespace api.Models.EntityModel
             entity.Property(p => p.RequestDate).HasColumnName("DataRequisicao").HasColumnType("datetime");
             entity.Property(p => p.EvaluationDateEnd).HasColumnName("DataPagamentoFim").IsRequired();
             entity.Property(p => p.EvaluationDateStart).HasColumnName("DataPagamentoInicio").IsRequired();
+            entity.Property(p => p.EvaluationBy).HasColumnName("AvaliadoPor");
             entity.Property(p => p.AdvanceDue).HasColumnName("TotalRepasse").HasColumnType("decimal(8,2)").IsRequired();
             entity.Property(p => p.IsApproved).HasColumnName("DataRepasse");
             
