@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,38 +20,98 @@ using Xunit;
 
 namespace tests
 {
+    public class StackTests : IDisposable
+    {
+        Stack<int> stack;
+
+        public StackTests()
+        {
+            stack = new Stack<int>();
+            stack.Push(10);
+        }
+
+        public void Dispose()
+        {
+            stack.Clear();
+        }
+
+        [Fact]
+        public void WithNoItems_CountShouldReturnZero()
+        {
+            var count = stack.Count;
+
+            Assert.Equal(1, count);
+        }
+
+        [Fact]
+        public void AfterPushingItem_CountShouldReturnOne()
+        {
+            stack.Push(42);
+
+            var count = stack.Count;
+
+            Assert.Equal(2, count);
+        }
+    }
+
+
     /// <summary>
     /// Classe de Testes
     /// </summary>
     /// <remarks>
     /// Testes funcionando, porém é necessário rodá-los 1 a 1
     /// </remarks>
-    public class PaymentTest
+    public class PaymentTest : IDisposable
     {
         #region Setup
 
-        public IConfiguration Configuration { get; set; }
-        public ILogger FakeLogger { get; set; }
-        public apiContext DbContext { get; set; }
-        public IAcquirerApi FakeAcquirer { get; set; }
-        public IAccountApi FakeAccount { get; set; }
+        readonly IConfiguration Configuration ;
+        readonly ILogger FakeLogger           ;
+        readonly apiContext DbContext         ;
+        readonly IAcquirerApi FakeAcquirer    ;
+        readonly IAccountApi FakeAccount      ;
 
         public PaymentTest()
         {
-            
-        }
-
-        public void SetupTest()
-        {
-            var options = new DbContextOptionsBuilder<apiContext>()
-                .UseInMemoryDatabase(databaseName: "ApiDatabase")
-                .Options;
-
             Configuration = BuildConfiguration();
+            DbContext = InitializeDbContext(Configuration);
             FakeLogger = BuildLogger();
-            DbContext = new apiContext(Configuration, options);
             FakeAcquirer = BuildAcquirerApiService();
             FakeAccount = BuildFakeAccountService(DbContext);
+        }
+
+        private apiContext InitializeDbContext(IConfiguration config)
+        {
+            var options = new DbContextOptionsBuilder<apiContext>()
+                .UseInMemoryDatabase(databaseName: "ApiDatabase" + Guid.NewGuid())
+                .Options;
+
+            var ctx = new apiContext(Configuration, options);
+
+            var admin = new User()
+            {
+                Name = "Administrador",
+                Email = "admin@pagcerto.com.br",
+                IsActive = true,
+            };
+
+            var customer = new Customer()
+            {
+                Name = "Olavo Neto",
+                Email = "olavo@exodus.eti.br",
+                IsActive = true
+            };
+
+            ctx.Users.Add(admin);
+            ctx.Customers.Add(customer);
+            ctx.SaveChanges();
+
+            return ctx;
+        }
+
+        public void Dispose()
+        {
+            DbContext.Dispose();
         }
 
         private IAccountApi BuildFakeAccountService(apiContext dbContext)
@@ -87,16 +148,11 @@ namespace tests
         [Fact]
         public async Task CreditCardPaymentTest()
         {
-            SetupTest();
-
             var customer = new CustomerModel()
             {
                 Name = "Olavo Neto",
                 Email = "olavo@exodus.eti.br",
             };
-
-            DbContext.Customers.Add(customer.Map());
-            DbContext.SaveChanges();
 
             var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
             var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
@@ -153,10 +209,10 @@ namespace tests
             Assert.Equal(0.0m, (await DbContext.Instalments.LastAsync()).AdvanceTax);
             Assert.Equal(19.1m, (await DbContext.Instalments.FirstAsync()).NetAmmount);
             Assert.Equal(customer.Id, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].CustomerId);
-            Assert.Equal(100m, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].AllInstallments);
+            Assert.Equal(100m, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[2].AllInstalments);
             Assert.Equal(4, (await DbContext.Instalments.Include(p => p.Customer).ToListAsync())[3].Number);
             Assert.NotNull((await DbContext.Instalments.LastAsync()).CreatedAt);
-            Assert.Equal(100,(await DbContext.Instalments.LastAsync()).AllInstallments);
+            Assert.Equal(100,(await DbContext.Instalments.LastAsync()).AllInstalments);
             Assert.Equal(5, (await DbContext.Instalments.LastAsync()).TotalOf);
         }
 
@@ -170,16 +226,11 @@ namespace tests
         [Fact]
         public async Task CheckAvailablePaymentsTest()
         {
-            SetupTest();
-
             var customer = new CustomerModel()
             {
                 Name = "Olavo Neto",
                 Email = "olavo@exodus.eti.br",
             };
-
-            DbContext.Customers.Add(customer.Map());
-            DbContext.SaveChanges();
 
             var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
             var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
@@ -236,16 +287,11 @@ namespace tests
         [Fact]
         public async Task RequestForAdvancePaymentTest()
         {
-            SetupTest();
-
             var customer = new CustomerModel()
             {
                 Name = "Olavo Neto",
                 Email = "olavo@exodus.eti.br",
             };
-
-            DbContext.Customers.Add(customer.Map());
-            DbContext.SaveChanges();
 
             var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
             var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
@@ -304,26 +350,16 @@ namespace tests
         [Fact]
         public async Task GetAdvancePaymentRequestDetailsTest()
         {
-            SetupTest();
-
             #region ContextSetup 
 
-            var customer = new CustomerModel()
-            {
-                Name = "Olavo Neto",
-                Email = "olavo@exodus.eti.br",
-            };
+            var dbContext = DbContext;
 
-            DbContext.Customers.Add(customer.Map());
-            DbContext.SaveChanges();
-
-            var registeredCustomer = await DbContext.Customers.FirstOrDefaultAsync();
+            var registeredCustomer = await dbContext.Customers.FirstOrDefaultAsync();
             var waiToken = registeredCustomer.MapToWhoAmI().EncryptToken();
-            customer.Id = registeredCustomer.Id;
-
+            var customerModel = new CustomerModel() { Id = registeredCustomer.Id, Name = registeredCustomer.Name, Email = registeredCustomer.Email };
             var paymentModel = new PaymentModel()
             {
-                Customer = customer,
+                Customer = customerModel,
                 Amount = 100,
                 InstalmentsCount = 5,
                 CardNumber = "5555111122223333",
@@ -336,7 +372,7 @@ namespace tests
 
             var paymentModel2 = new PaymentModel()
             {
-                Customer = customer,
+                Customer = customerModel,
                 Amount = 150,
                 InstalmentsCount = 5,
                 CardNumber = "5555111122223333",
@@ -346,7 +382,7 @@ namespace tests
                 AuthToken = waiToken
             };
 
-            PaymentController controller = new PaymentController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            PaymentController controller = new PaymentController(dbContext, FakeAcquirer, FakeAccount, FakeLogger);
             await controller.ProcessPayment(paymentModel);
             await controller.ProcessPayment(paymentModel2);
 
@@ -386,35 +422,28 @@ namespace tests
         [Fact]
         public async Task BeginAdvancePaymentRequestEvaluationTest()
         {
+            var dbContext = DbContext;
             await GetAdvancePaymentRequestDetailsTest();
+            Assert.Equal(2, dbContext.Payments.Count());
+            Assert.Equal(1, dbContext.Advances.Count());
 
-            var admin = new User()
-            {
-                Name = "Administrador",
-                Email = "admin@pagcerto.com.br",
-                IsActive = true,
-            };
-
-            DbContext.Users.Add(admin);
-            DbContext.SaveChanges();
-
-            var registeredAdmin = await DbContext.Users.FirstOrDefaultAsync();
+            var registeredAdmin = await dbContext.Users.FirstOrDefaultAsync();
             var waiAdminToken = registeredAdmin.MapToWhoAdminAmI().EncryptToken();
 
-            AdminController controller = new AdminController(DbContext, FakeAcquirer, FakeAccount, FakeLogger);
+            AdminController controller = new AdminController(dbContext, FakeAcquirer, FakeAccount, FakeLogger);
             var model = new AdvanceEvaluationModel()
             {
                 AuthToken = waiAdminToken,
-                Id = 1
+                Id = dbContext.Advances.First().Id
             };
 
             var advance = await controller.BeginAdvanceEvaluation(model);
-
+            Assert.IsType<AdvanceJson>(advance);
             Assert.NotNull(advance.EvaluationDateStart);
             Assert.Null(advance.EvaluationDateEnd);
             Assert.True(DateTime.Now.AddMinutes(-1) < advance.EvaluationDateStart);
-            Assert.Equal(admin.Id, advance.EvaluationBy);
-            Assert.Equal(1, advance.Id);
+            Assert.Equal(registeredAdmin.Id, advance.EvaluationBy);
+            Assert.Equal(model.Id, advance.Id);
         }
 
         /// <summary>
@@ -461,7 +490,7 @@ namespace tests
             {
                 AuthToken = waiAdminToken,
                 IsApproved = true ,
-                Id = 1
+                Id = DbContext.Advances.First().Id
             };
             var adv2 = await controller.EndAdvanceEvaluation(evaluationModel);
             Assert.IsType<AdvanceJson>(adv2);
@@ -483,7 +512,7 @@ namespace tests
             {
                 AuthToken = waiAdminToken,
                 IsApproved = false,
-                Id = 1
+                Id = DbContext.Advances.First().Id
             };
             var adv2 = await controller.EndAdvanceEvaluation(evaluationModel);
             Assert.IsType<AdvanceJson>(adv2);

@@ -23,7 +23,9 @@ namespace api.Models.EntityModel
             entity.Property(p => p.EvaluationBy).HasColumnName("AvaliadoPor");
             entity.Property(p => p.AdvanceDue).HasColumnName("TotalRepasse").HasColumnType("decimal(8,2)").IsRequired();
             entity.Property(p => p.IsApproved).HasColumnName("DataRepasse");
-            
+            entity.Property(p => p.AdvanceTaxes).HasColumnName("TaxaAntecipacao").HasColumnType("decimal(8,2)");
+            entity.Property(p => p.FixedTaxes).HasColumnName("TaxaFixa").HasColumnType("decimal(8,2)");
+            entity.Property(p => p.NetAmount).HasColumnName("Liquido").HasColumnType("decimal(8,2)");
             entity.Property(p => p.GrossAmount).HasColumnName("Valor").HasColumnType("decimal(8,2)");
 
             entity.HasMany(a => a.Payments)

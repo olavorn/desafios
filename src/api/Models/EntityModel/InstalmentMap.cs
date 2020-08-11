@@ -27,6 +27,9 @@ namespace api.Models.EntityModel
             entity.Property(p => p.TargetDate).HasColumnName("DataAlvoPagamento").HasColumnType("datetime");
             entity.Property(p => p.AdvanceTax).HasColumnName("TaxaAntecipacao").HasColumnType("decimal(8,2)");
             entity.Property(p => p.FixedTax).HasColumnName("TaxaFixa").HasColumnType("decimal(8,2)");
+            entity.Property(p => p.AllInstalments).HasColumnName("TotalPagamento").HasColumnType("decimal(8,2)");
+
+            
 
             entity.HasOne(i => i.Customer)
                 .WithMany(b => b.Instalments)

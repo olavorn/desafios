@@ -23,7 +23,7 @@ namespace api.Models.EntityModel
         /// <summary>
         /// Indicate if the Customer is Active
         /// </summary>
-        public bool IsActive { get; set; }
+        public bool? IsActive { get; set; }
 
         //ef navigation props
         public List<Instalment> Instalments { get; set; }

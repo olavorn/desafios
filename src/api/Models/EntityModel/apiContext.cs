@@ -28,13 +28,16 @@ namespace api.Models.EntityModel
             //options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
         }
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.ForSqlServerUseIdentityColumns();
             modelBuilder.ApplyConfiguration(new CustomerMap());
             modelBuilder.ApplyConfiguration(new PaymentMap());
             modelBuilder.ApplyConfiguration(new AdvanceMap());
             modelBuilder.ApplyConfiguration(new InstalmentMap());
+            modelBuilder.ApplyConfiguration(new UserMap());
         }
     }
 }

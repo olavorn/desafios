@@ -29,7 +29,7 @@ namespace api.Model
         /// <summary>
         /// Total do Pagamento
         /// </summary>
-        public decimal AllInstallments { get; set; }
+        public decimal AllInstalments { get; set; }
 
         /// <summary>
         /// Data do Pagamento

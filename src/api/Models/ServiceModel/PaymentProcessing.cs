@@ -50,7 +50,7 @@ namespace api.Models.ServiceModel
                         CustomerId = customer.CustomerId,
                         Number = i,
                         TotalOf = payment.InstalmentsCount,
-                        AllInstallments = payment.Amount,
+                        AllInstalments = payment.Amount,
                         FixedTax = i == 1 ? _fixedTax : 0m,
                         AdvanceTax = 0m,
                         TargetDate = DateTime.Now.AddDays(30 * i).Date
