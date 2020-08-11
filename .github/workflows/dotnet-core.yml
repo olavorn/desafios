@@ -18,8 +18,8 @@ jobs:
       with:
         dotnet-version: 3.1.301
     - name: Install dependencies
-      run: dotnet restore src/PagCerto.sln
+      run: dotnet restore src/PagCertoApi.sln
     - name: Build
-      run: dotnet build src/PagCerto.sln --configuration Release --no-restore
+      run: dotnet build src/PagCertoApi.sln --configuration Release --no-restore
     - name: Test
-      run: dotnet test src/PagCerto.sln --no-restore --verbosity normal
+      run: dotnet test src/PagCertoApi.sln --no-restore --verbosity normal
